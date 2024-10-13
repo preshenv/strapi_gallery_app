@@ -1,0 +1,94 @@
+---
+import { API_URL } from "../../constants";
+
+interface Gallery {
+  url: string;
+  id: number;
+  name: string;
+}
+export async function getStaticPaths() {
+  const response = await fetch(`${API_URL}/api/upload/files`);
+  const images = await response.json();
+
+  return images.map((image: Gallery) => ({
+    params: { id: image.id.toString() },
+  }));
+}
+
+const { id } = Astro.params;
+
+let imageData = null;
+let error = null;
+
+try {
+  const response = await fetch(`${API_URL}/api/upload/files/${id}`);
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch image data for ID ${id}`);
+  }
+  
+  imageData = await response.json();
+} catch (err: any) {
+  error = err.message;
+}
+---
+
+<html lang="en">
+  <head>
+    <title>{imageData ? imageData.name : "Image Not Found"} - Image Gallery</title>
+    <style>
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .image-container {
+        text-align: center;
+      }
+      .image-container img {
+        max-width: 100%;
+        height: auto;
+      }
+      .image-info {
+        margin-top: 20px;
+      }
+      .back-link {
+        display: inline-block;
+        margin-top: 20px;
+        padding: 10px 15px;
+        background-color: #007bff;
+        color: white;
+        text-decoration: none;
+        border-radius: 5px;
+      }
+      .error {
+        color: red;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      {error ? (
+        <div class="error">
+          <h1>Error</h1>
+          <p>{error}</p>
+          <a href="/" class="back-link">Back to Gallery</a>
+        </div>
+      ) : (
+        <>
+          <h1>{imageData.name}</h1>
+          <div class="image-container">
+            <img src={`${API_URL}${imageData.url}`} alt={imageData.name} />
+          </div>
+          <div class="image-info">
+            <p><strong>File name:</strong> {imageData.name}</p>
+            <p><strong>Upload date:</strong> {new Date(imageData.createdAt).toLocaleString()}</p>
+            <p><strong>File size:</strong> {(imageData.size / 1024).toFixed(2)} KB</p>
+          </div>
+        </>
+      )}
+      <a href="/" class="back-link">Back to Gallery</a>
+    </div>
+  </body>
+</html>
